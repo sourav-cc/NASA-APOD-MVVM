@@ -20,6 +20,7 @@ This project follows the MVVM (Model-View-ViewModel) architecture pattern along 
 ## Technologies Used
 
 - **Kotlin**: 100% Kotlin codebase
+- **Compose-based UI**: In compose branch
 - **Coroutines & Flow**: For asynchronous operations
 - **Retrofit**: For network requests
 - **Hilt**: For dependency injection
