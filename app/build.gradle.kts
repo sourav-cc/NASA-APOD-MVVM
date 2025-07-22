@@ -38,6 +38,10 @@ android {
     buildFeatures {
         viewBinding = true
         dataBinding = true // Enable data binding
+        compose = true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion  = "1.5.8"
     }
 }
 
@@ -84,4 +88,17 @@ dependencies {
 
 // Glide for image loading
     implementation(libs.glide)
+
+    val composeBom = platform("androidx.compose:compose-bom:2023.10.01")
+    implementation(composeBom)
+
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.ui.tooling.preview)
+    debugImplementation(libs.androidx.ui.tooling)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.coil.compose)
+
 }

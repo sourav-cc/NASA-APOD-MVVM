@@ -1,98 +1,138 @@
 package com.example.nasapictureofdaymvvm
 
 import android.os.Bundle
-import android.view.View
-import androidx.activity.enableEdgeToEdge
+import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
-import com.bumptech.glide.Glide
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.nasapictureofdaymvvm.data.ApodResponse
-import com.example.nasapictureofdaymvvm.databinding.ActivityMainBinding
 import com.example.nasapictureofdaymvvm.presentation.viewmodel.ApodUiState
 import com.example.nasapictureofdaymvvm.presentation.viewmodel.ApodViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
-
-    private lateinit var binding: ActivityMainBinding
     private val viewModel: ApodViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
-            insets
-        }
+        setContent {
+            MaterialTheme {
+                Surface(
+                    modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background
+                ) {
+                    ApodScreen(viewModel)
 
-        setupObservers()
-    }
-
-    private fun setupObservers() {
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { state ->
-                    handleUiState(state)
                 }
             }
         }
     }
 
-    private fun handleUiState(state: ApodUiState) {
-        when (state) {
-            is ApodUiState.Loading -> showLoading()
-            is ApodUiState.Success -> showContent(state.data)
-            is ApodUiState.Error -> showError(state.message)
+    @Composable
+    private fun ApodScreen(viewModel: ApodViewModel) {
+        val uiState by viewModel.uiState.collectAsState(initial = ApodUiState.Loading)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            when (val state = uiState) {
+                is ApodUiState.Loading -> LoadingView()
+                is ApodUiState.Success -> ContentView(state.data)
+                is ApodUiState.Error -> ErrorView(state.message)
+            }
+
         }
     }
 
-    private fun showLoading() {
-        binding.progressBar.visibility = View.VISIBLE
-        binding.contentScrollView.visibility = View.GONE
-        binding.errorMessage.visibility = View.GONE
+    @Composable
+    fun ErrorView(message: String) {
+        Box(
+            contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()
+        ) {
+            Text(
+                text = message, color = Color.Red, fontSize = 18.sp, textAlign = TextAlign.Center
+            )
+        }
     }
 
-    private fun showContent(apod: ApodResponse) {
-        binding.progressBar.visibility = View.GONE
-        binding.contentScrollView.visibility = View.VISIBLE
-        binding.errorMessage.visibility = View.GONE
-
-        binding.titleTextView.text = apod.title
-        binding.dateTextView.text = apod.date
-        binding.explanationTextView.text = apod.explanation
-
-        binding.copyrightTextView.apply {
-            visibility = if (apod.copyright != null) {
-                text = "Copyright: ${apod.copyright}"
-                View.VISIBLE
-            } else {
-                View.GONE
+    @Composable
+    fun ContentView(data: ApodResponse) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text(
+                text = data.title,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                text = data.date,
+                fontStyle = FontStyle.Italic,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+            )
+            if (data.mediaType == "image") {
+                AsyncImage(
+                    model = data.url,
+                    contentDescription = data.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(250.dp)
+                        .padding(top = 16.dp)
+                )
+            }
+            Text(
+                text = data.explanation, modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp)
+            )
+            data.copyright?.let {
+                Text(
+                    text = it,
+                    fontStyle = FontStyle.Italic,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp)
+                )
             }
         }
-
-        binding.apodImageView.visibility = if (apod.mediaType == "image") {
-            Glide.with(this).load(apod.url).into(binding.apodImageView)
-            View.VISIBLE
-        } else {
-            View.GONE
-        }
     }
 
-    private fun showError(message: String) {
-        binding.progressBar.visibility = View.GONE
-        binding.contentScrollView.visibility = View.GONE
-        binding.errorMessage.apply {
-            visibility = View.VISIBLE
-            text = message
+    @Composable
+    fun LoadingView() {
+        Box(
+            contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()
+        ) {
+            CircularProgressIndicator()
         }
     }
 }
